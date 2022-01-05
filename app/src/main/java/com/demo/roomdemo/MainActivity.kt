@@ -2,18 +2,22 @@ package com.demo.roomdemo
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.MutableLiveData
+//import androidx.lifecycle.Observer
+//import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.StaggeredGridLayoutManager.VERTICAL
+import com.demo.roomdemo.db.RoomAppDb
 import com.demo.roomdemo.db.UserEntity
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity(), RecyclerViewAdapter.RowClickListener {
 
     lateinit var recyclerViewAdapter: RecyclerViewAdapter
-    lateinit var viewModel: MainActivityViewModel
+//    lateinit var viewModel: MainActivityViewModel
+lateinit var allUsers : MutableLiveData<List<UserEntity>>
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,13 +31,26 @@ class MainActivity : AppCompatActivity(), RecyclerViewAdapter.RowClickListener {
             adapter = recyclerViewAdapter
             val divider = DividerItemDecoration(applicationContext, VERTICAL)
             addItemDecoration(divider)
+            val userDao = RoomAppDb.getAppDatabase((getApplication()))?.userDao()
+            allUsers = MutableLiveData()
+            val list = userDao?.getAllUserInfo()
+
+            allUsers.postValue(list)
+
         }
 
-        viewModel = ViewModelProviders.of(this).get(MainActivityViewModel::class.java)
-        viewModel.getAllUsersObservers().observe(this, Observer {
-            recyclerViewAdapter.setListData(ArrayList(it))
-            recyclerViewAdapter.notifyDataSetChanged()
-        })
+//        fun getAllUsers() {
+//            val userDao = RoomAppDb.getAppDatabase((getApplication()))?.userDao()
+//            val list = userDao?.getAllUserInfo()
+//
+//            allUsers.postValue(list)
+//        }
+
+//        viewModel = ViewModelProviders.of(this).get(MainActivityViewModel::class.java)
+//        viewModel.getAllUsersObservers().observe(this, Observer {
+//            recyclerViewAdapter.setListData(ArrayList(it))
+//            recyclerViewAdapter.notifyDataSetChanged()
+//        })
 
 
         saveButton.setOnClickListener {
@@ -42,10 +59,15 @@ class MainActivity : AppCompatActivity(), RecyclerViewAdapter.RowClickListener {
             val phone = phoneInput.text.toString()
             if(saveButton.text.equals("Save")) {
                 val user = UserEntity(0, name, email, phone)
-                viewModel.insertUserInfo(user)
+                val userDao = RoomAppDb.getAppDatabase(getApplication())?.userDao()
+                userDao?.insertUser(user)
+
             } else {
                 val user = UserEntity(nameInput.getTag(nameInput.id).toString().toInt(), name, email, phone)
-                viewModel.updateUserInfo(user)
+
+                val userDao = RoomAppDb.getAppDatabase(getApplication())?.userDao()
+                userDao?.updateUser(user)
+                allUsers
                 saveButton.setText("Save")
             }
             nameInput.setText("")
@@ -56,7 +78,9 @@ class MainActivity : AppCompatActivity(), RecyclerViewAdapter.RowClickListener {
 
 
     override fun onDeleteUserClickListener(user: UserEntity) {
-        viewModel.deleteUserInfo(user)
+        val userDao = RoomAppDb.getAppDatabase(getApplication())?.userDao()
+        userDao?.deleteUser(user)
+        allUsers
     }
 
     override fun onItemClickListener(user: UserEntity) {
